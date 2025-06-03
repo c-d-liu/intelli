@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Intelligibility Rating Survey</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+  <script defer>
+    let surveyData = [];
+    let currentPage = 0;
+    let responses = [];
+
+    async function loadJSON() {
+      const res = await fetch('pages.json');
+      surveyData = await res.json();
+      showPage();
+    }
+
+    function showPage() {
+      if (currentPage >= surveyData.length) {
+        document.getElementById('survey').innerHTML = `
+          <h2 class="text-xl mb-4">Thank you for your participation!</h2>
+          <button onclick="downloadResponses()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 mr-2">Download JSON</button>
+          <button onclick="downloadCSV()" class="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700">Download CSV</button>
+        `;
+        return;
+      }
+      const pageData = surveyData[currentPage];
+      document.getElementById('page-number').textContent = `Page ${pageData.page} of ${surveyData.length}`;
+      document.getElementById('audio').src = pageData.audio;
+    }
+
+    function nextPage() {
+      const intelligibility = document.getElementById('intelligibility').value;
+
+      if (intelligibility === '') {
+        alert('Please rate the intelligibility before proceeding.');
+        return;
+      }
+
+      responses.push({
+        page: surveyData[currentPage].page,
+        intelligibility: parseInt(intelligibility)
+      });
+
+      document.getElementById('intelligibility').value = '';
+
+      currentPage++;
+      showPage();
+    }
+
+    function downloadResponses() {
+      const blob = new Blob([JSON.stringify(responses, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'intelligibility_responses.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadCSV() {
+      const header = 'page,intelligibility\n';
+      const rows = responses.map(r => `${r.page},${r.intelligibility}`).join('\n');
+      const csvContent = header + rows;
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'intelligibility_responses.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</head>
+<body onload="loadJSON()" class="bg-gray-100 p-6 font-sans">
+  <div class="max-w-xl mx-auto bg-white p-6 rounded shadow">
+    <div id="survey">
+      <h1 class="text-2xl font-bold mb-4">Intelligibility Rating Survey</h1>
+      <p id="page-number" class="mb-4"></p>
+      <div class="mb-4">
+        <p class="font-semibold">Listen to the audio:</p>
+        <audio id="audio" controls></audio>
+      </div>
+
+      <div class="mb-6">
+        <label class="block mb-2 font-semibold">How intelligible is the audio? (1 = Not at all, 5 = Very clear)</label>
+        <input type="number" id="intelligibility" min="1" max="5" class="w-full border px-3 py-2 rounded" required>
+      </div>
+
+      <button onclick="nextPage()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Next</button>
+    </div>
+  </div>
+</body>
+</html>
